@@ -6,6 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/apply',        require('./routes/apply'));
 app.use('/api/newsletter',   require('./routes/newsletter'));
 app.use('/api/donations',    require('./routes/donations'));
