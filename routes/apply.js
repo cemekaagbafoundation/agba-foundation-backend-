@@ -40,3 +40,13 @@ router.get('/', adminAuth, async (req, res) => {
 });
 
 module.exports = router;
+
+// ADMIN: Delete an application
+router.delete('/:id', adminAuth, async (req, res) => {
+  const { error } = await supabase
+    .from('applications')
+    .delete()
+    .eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: 'Application deleted' });
+});

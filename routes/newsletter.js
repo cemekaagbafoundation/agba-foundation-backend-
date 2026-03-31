@@ -38,3 +38,13 @@ router.get('/', adminAuth, async (req, res) => {
 });
 
 module.exports = router;
+
+// ADMIN: Delete a subscriber
+router.delete('/:id', adminAuth, async (req, res) => {
+  const { error } = await supabase
+    .from('newsletter_subscribers')
+    .delete()
+    .eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ message: 'Subscriber deleted' });
+});
