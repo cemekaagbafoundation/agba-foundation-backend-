@@ -21,6 +21,7 @@ app.use('/api/content',      require('./routes/content'));
 app.use('/api/programs',     require('./routes/programs'));
 app.use('/api/contact',      require('./routes/contact'));
 app.use('/api/transparency', require('./routes/transparency'));
+app.use('/api/firstbank', require('./routes/firstbankPayment'));
 app.use('/api/partners',     require('./routes/partners'));
 app.use('/api/hero-images',  require('./routes/heroImages'));
 
