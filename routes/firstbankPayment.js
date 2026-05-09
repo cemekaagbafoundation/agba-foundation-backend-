@@ -153,4 +153,24 @@ router.get('/donations', adminAuth, async (req, res) => {
   res.json(data);
 });
 
+
+// ── SAVE PENDING DONATION ──
+router.post('/save-donation', async (req, res) => {
+  const { name, email, amount, reference, currency = 'NGN' } = req.body;
+  try {
+    await supabase.from('donations').insert([{
+      name: name || 'Anonymous',
+      email,
+      amount: Number(amount),
+      reference,
+      currency,
+      status: 'pending',
+      gateway: 'firstchekout'
+    }]);
+    res.json({ message: 'Donation saved' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
