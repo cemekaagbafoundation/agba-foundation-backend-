@@ -94,6 +94,19 @@ router.post('/verify-payment', async (req, res) => {
   const { reference } = req.body;
   if (!reference) return res.status(400).json({ error: 'Reference is required' });
   try {
+    await supabase.from('donations').update({ status: 'success' }).eq('reference', reference);
+    console.log('Donation marked success:', reference);
+    return res.json({ message: 'Payment verified', status: 'success' });
+  } catch (err) {
+    console.error('Verify error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/verify-payment-old', async (req, res) => {
+  const { reference } = req.body;
+  if (!reference) return res.status(400).json({ error: 'Reference is required' });
+  try {
     const response = await axios.get(
       'https://www.firstchekout.com/chekoutframeapi/api/v2/transactions/verify/' + reference,
       {
