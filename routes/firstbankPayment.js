@@ -95,7 +95,7 @@ router.post('/verify-payment', async (req, res) => {
   if (!reference) return res.status(400).json({ error: 'Reference is required' });
   try {
     const response = await axios.get(
-      FB_BASE + '/api/v1/payments/verify/' + reference,
+      'https://www.firstchekout.com/chekoutframeapi/api/v2/transactions/verify/' + reference,
       {
         headers: {
           'Authorization': 'Bearer ' + FB_SECRET,
