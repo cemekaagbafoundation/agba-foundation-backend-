@@ -138,7 +138,7 @@ router.post('/verify-payment-old', async (req, res) => {
 
 router.post('/webhook', async (req, res) => {
   let payload;
-  try { payload = JSON.parse(req.body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); }
+  payload = req.body;
   console.log('FirstChekout webhook:', JSON.stringify(payload, null, 2));
   const reference = (payload && payload.data && payload.data.reference) || (payload && (payload.ref || payload.reference));
   const status = (payload && payload.data && payload.data.status) || (payload && payload.status);
