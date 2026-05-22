@@ -178,3 +178,14 @@ router.get('/donations', adminAuth, async (req, res) => {
 
 module.exports = router;
 // Monthly Plan Updated - Fri May 22 00:48:49 UTC 2026
+
+// ── GET WEBHOOK LOGS (Admin) ──
+router.get('/webhook-logs', adminAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from('webhook_logs')
+    .select('*')
+    .order('received_at', { ascending: false })
+    .limit(100);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
