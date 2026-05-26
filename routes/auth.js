@@ -95,3 +95,12 @@ router.get('/verify-token', async (req, res) => {
 });
 
 module.exports = router;
+
+router.post('/login', async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password required' });
+  if (password !== process.env.ADMIN_SECRET) {
+    return res.status(401).json({ error: 'Incorrect password. Please try again.' });
+  }
+  res.json({ token: process.env.ADMIN_SECRET, message: 'Login successful' });
+});
