@@ -137,17 +137,84 @@ router.post('/verify-payment-old', async (req, res) => {
 });
 
 router.post('/webhook', async (req, res) => {
-  let payload;
-  payload = req.body;
-  console.log('FirstChekout webhook:', JSON.stringify(payload, null, 2));
-  const reference = (payload && payload.data && payload.data.reference) || (payload && (payload.ref || payload.reference));
-  const status = (payload && payload.data && payload.data.status) || (payload && payload.status);
-  if (!reference) return res.status(200).json({ received: true });
+  const payload = req.body;
+  const headers = req.headers;
+  const received_at = new Date().toISOString();
+
+  // Log everything
+  console.log('=== WEBHOOK RECEIVED ===');
+  console.log('Time:', received_at);
+  console.log('Headers:', JSON.stringify({
+    'content-type': headers['content-type'],
+    'user-agent': headers['user-agent'],
+    'x-forwarded-for': headers['x-forwarded-for'],
+    'host': headers['host'],
+    'x-firstbank-signature': headers['x-firstbank-signature'],
+    'x-webhook-signature': headers['x-webhook-signature'],
+    'authorization': headers['authorization'],
+  }, null, 2));
+  console.log('Full Body:', JSON.stringify(payload, null, 2));
+  console.log('Body keys:', payload ? Object.keys(payload) : 'empty');
+  console.log('========================');
+
+  // Save to webhook_logs
+  let logId = null;
+  try {
+    const { data: logData } = await supabase
+      .from('webhook_logs')
+      .insert([{
+        provider: 'firstchekout',
+        event_type: (payload && (payload.event || payload.type || payload.status)) || 'unknown',
+        payload: payload || {},
+        headers: {
+          'content-type': headers['content-type'],
+          'user-agent': headers['user-agent'],
+          'x-forwarded-for': headers['x-forwarded-for'],
+          'host': headers['host'],
+        },
+        received_at,
+        processed: false,
+        status: 'received',
+      }])
+      .select('id')
+      .single();
+    logId = logData && logData.id;
+    console.log('Webhook log saved, id:', logId);
+  } catch (logErr) {
+    console.error('Failed to save webhook log:', logErr.message);
+  }
+
+  if (!payload) {
+    return res.status(400).json({ error: 'Empty body' });
+  }
+
+  const reference = (payload.data && payload.data.reference) || payload.ref || payload.reference;
+  const status = (payload.data && payload.data.status) || payload.status || payload.event;
+
+  if (!reference) {
+    if (logId) await supabase.from('webhook_logs').update({ status: 'no_reference', processed: true }).eq('id', logId);
+    return res.status(200).json({ received: true });
+  }
+
+  let processed = false;
+  let finalStatus = 'unmatched';
+
   if (['SUCCESS', 'success', 'SUCCESSFUL', 'successful', '00'].includes(String(status))) {
     await supabase.from('donations').update({ status: 'success' }).eq('reference', reference);
+    processed = true;
+    finalStatus = 'success';
+    console.log('Donation marked success via webhook:', reference);
   } else if (['FAILED', 'failed', 'CANCELLED', 'cancelled'].includes(String(status))) {
     await supabase.from('donations').update({ status: 'failed' }).eq('reference', reference);
+    processed = true;
+    finalStatus = 'failed';
+    console.log('Donation marked failed via webhook:', reference);
   }
+
+  if (logId) {
+    await supabase.from('webhook_logs').update({ processed, status: finalStatus }).eq('id', logId);
+  }
+
   res.status(200).json({ received: true });
 });
 
