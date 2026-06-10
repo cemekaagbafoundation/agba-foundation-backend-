@@ -217,18 +217,48 @@ router.post('/webhook', async (req, res) => {
   let processed = false;
   let finalStatus = 'unmatched';
 
+  // Extract full transaction details from webhook
+  const txDetails = payload.transaction || {};
+  const customerDetails = txDetails.customer || {};
+  const webhookAmount = txDetails.amount || null;
+  const collectionMethod = txDetails.collectionMethod || null;
+  const customerName = customerDetails.name || null;
+  const customerEmail = customerDetails.email || null;
+
+  console.log('Transaction details:', {
+    reference,
+    transactionRef,
+    amount: webhookAmount,
+    collectionMethod,
+    customer: { name: customerName, email: customerEmail },
+    statusCode,
+  });
+
   if (['SUCCESS', 'success', 'SUCCESSFUL', 'successful', '00'].includes(String(statusCode))) {
     await supabase.from('donations')
       .update({
         status: 'success',
-        gateway_reference: transactionRef || undefined,
+        gateway_reference: transactionRef || null,
+        collection_method: collectionMethod || null,
+        webhook_verified: true,
+        webhook_received_at: received_at,
+        name: customerName || undefined,
+        email: customerEmail || undefined,
       })
       .eq('reference', reference);
     processed = true;
     finalStatus = 'success';
     console.log('Donation marked success via webhook:', reference);
+    console.log('Amount:', webhookAmount, '| Method:', collectionMethod, '| Customer:', customerName);
   } else if (['FAILED', 'failed', 'CANCELLED', 'cancelled', 'DECLINED'].includes(String(statusCode))) {
-    await supabase.from('donations').update({ status: 'failed' }).eq('reference', reference);
+    await supabase.from('donations')
+      .update({
+        status: 'failed',
+        gateway_reference: transactionRef || null,
+        webhook_verified: true,
+        webhook_received_at: received_at,
+      })
+      .eq('reference', reference);
     processed = true;
     finalStatus = 'failed';
     console.log('Donation marked failed via webhook:', reference);
