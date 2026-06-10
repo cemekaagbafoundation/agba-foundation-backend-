@@ -188,23 +188,46 @@ router.post('/webhook', async (req, res) => {
     return res.status(400).json({ error: 'Empty body' });
   }
 
-  const reference = (payload.data && payload.data.reference) || payload.ref || payload.reference;
-  const status = (payload.data && payload.data.status) || payload.status || payload.event;
+  // Parse First Bank webhook payload structure
+  // reference is in transaction.merchantReference
+  // status is in response.code ('00' = success) or response.status ('SUCCESS')
+  const reference =
+    (payload.transaction && payload.transaction.merchantReference) ||
+    (payload.data && payload.data.reference) ||
+    payload.ref || payload.reference;
+
+  const statusCode =
+    (payload.response && payload.response.code) ||
+    (payload.response && payload.response.status) ||
+    (payload.data && payload.data.status) ||
+    payload.status || payload.event;
+
+  const transactionRef =
+    (payload.transaction && payload.transaction.transactionReference) || null;
+
+  console.log('Parsed reference:', reference);
+  console.log('Parsed statusCode:', statusCode);
+  console.log('Transaction ref:', transactionRef);
 
   if (!reference) {
     if (logId) await supabase.from('webhook_logs').update({ status: 'no_reference', processed: true }).eq('id', logId);
-    return res.status(200).json({ received: true });
+    return res.status(200).json({ status: 'success', message: 'Webhook received', received: true });
   }
 
   let processed = false;
   let finalStatus = 'unmatched';
 
-  if (['SUCCESS', 'success', 'SUCCESSFUL', 'successful', '00'].includes(String(status))) {
-    await supabase.from('donations').update({ status: 'success' }).eq('reference', reference);
+  if (['SUCCESS', 'success', 'SUCCESSFUL', 'successful', '00'].includes(String(statusCode))) {
+    await supabase.from('donations')
+      .update({
+        status: 'success',
+        gateway_reference: transactionRef || undefined,
+      })
+      .eq('reference', reference);
     processed = true;
     finalStatus = 'success';
     console.log('Donation marked success via webhook:', reference);
-  } else if (['FAILED', 'failed', 'CANCELLED', 'cancelled'].includes(String(status))) {
+  } else if (['FAILED', 'failed', 'CANCELLED', 'cancelled', 'DECLINED'].includes(String(statusCode))) {
     await supabase.from('donations').update({ status: 'failed' }).eq('reference', reference);
     processed = true;
     finalStatus = 'failed';
@@ -215,7 +238,7 @@ router.post('/webhook', async (req, res) => {
     await supabase.from('webhook_logs').update({ processed, status: finalStatus }).eq('id', logId);
   }
 
-  res.status(200).json({ received: true });
+  res.status(200).json({ status: 'success', message: 'Webhook received', received: true });
 });
 
 router.post('/save-donation', async (req, res) => {
