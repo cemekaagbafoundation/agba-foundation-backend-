@@ -217,13 +217,13 @@ router.post('/webhook', async (req, res) => {
   let processed = false;
   let finalStatus = 'unmatched';
 
-  // Extract full transaction details from webhook
+  // Extract full transaction details from webhook (supports both formats)
   const txDetails = payload.transaction || {};
   const customerDetails = txDetails.customer || {};
-  const webhookAmount = txDetails.amount || null;
-  const collectionMethod = txDetails.collectionMethod || null;
-  const customerName = customerDetails.name || null;
-  const customerEmail = customerDetails.email || null;
+  const webhookAmount = txDetails.amount || payload.Amount || null;
+  const collectionMethod = txDetails.collectionMethod || payload.CollectionMethod || null;
+  const customerName = customerDetails.name || payload.PayerName || null;
+  const customerEmail = customerDetails.email || payload.PayerEmail || null;
 
   console.log('Transaction details:', {
     reference,
