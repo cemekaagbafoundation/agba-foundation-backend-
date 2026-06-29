@@ -187,27 +187,33 @@ router.post('/webhook', async (req, res) => {
   if (!payload) {
     return res.status(400).json({ error: 'Empty body' });
   }
+  // Parse First Bank webhook payload - supports flat PascalCase and nested formats
+  let p = payload;
+  if (typeof payload === "string") { try { p = JSON.parse(payload); } catch(e) { p = payload; } }
 
-  // Parse First Bank webhook payload structure
-  // reference is in transaction.merchantReference
-  // status is in response.code ('00' = success) or response.status ('SUCCESS')
   const reference =
-    (payload.transaction && payload.transaction.merchantReference) ||
-    (payload.data && payload.data.reference) ||
-    payload.ref || payload.reference;
+    p.PaymentReference || p.paymentReference ||
+    p.MerchantReference || p.merchantReference ||
+    (p.transaction && p.transaction.merchantReference) ||
+    (p.data && p.data.reference) ||
+    p.ref || p.reference || null;
 
   const statusCode =
-    (payload.response && payload.response.code) ||
-    (payload.response && payload.response.status) ||
-    (payload.data && payload.data.status) ||
-    payload.status || payload.event;
+    p.Status || p.status ||
+    (p.response && (p.response.code || p.response.status)) ||
+    (p.data && p.data.status) ||
+    p.event || null;
 
   const transactionRef =
-    (payload.transaction && payload.transaction.transactionReference) || null;
+    p.TransactionReference || p.transactionReference ||
+    (p.transaction && p.transaction.transactionReference) || null;
 
-  console.log('Parsed reference:', reference);
-  console.log('Parsed statusCode:', statusCode);
-  console.log('Transaction ref:', transactionRef);
+  console.log("=== PARSED WEBHOOK ===");
+  console.log("Payload keys:", Object.keys(p));
+  console.log("Reference:", reference);
+  console.log("StatusCode:", statusCode);
+  console.log("TransactionRef:", transactionRef);
+  console.log("======================");
 
   if (!reference) {
     if (logId) await supabase.from('webhook_logs').update({ status: 'no_reference', processed: true }).eq('id', logId);
