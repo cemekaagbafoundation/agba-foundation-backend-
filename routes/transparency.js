@@ -10,6 +10,8 @@ const supabase = createClient(
 
 // PUBLIC: Get all transparency/impact data
 router.get('/', async (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.set("Pragma", "no-cache");
   try {
     const [donationsResult, statsResult, feedResult] = await Promise.all([
       supabase.from('donations').select('amount').eq('status', 'success'),
