@@ -24,6 +24,7 @@ app.use('/api/transparency', require('./routes/transparency'));
 app.use('/api/firstbank', require('./routes/firstbankPayment'));
 app.use('/api/partners',     require('./routes/partners'));
 app.use('/api/hero-images',  require('./routes/heroImages'));
+app.use('/api/paystack',     require('./routes/paystack'));
 
 app.get('/', (req, res) => res.send('Agba Foundation API is running'));
 
